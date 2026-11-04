@@ -6,10 +6,15 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Vary', 'Origin');
   const origin = process.env.ALLOWED_ORIGIN?.trim();
-  if (!origin || req.headers.origin !== origin) {
+  const requestOrigin = req.headers.origin;
+  // Preview hosts rotate between editor sessions. CORS is not authentication:
+  // every POST still requires the private testing code below.
+  const isTheoPreview = typeof requestOrigin === 'string' &&
+    /^https:\/\/3000-[a-z0-9]+-[a-f0-9]+\.theopreview\.com$/.test(requestOrigin);
+  if (!origin || typeof requestOrigin !== 'string' || (requestOrigin !== origin && !isTheoPreview)) {
     return res.status(403).json({ error: 'This website is not allowed.' });
   }
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Origin', requestOrigin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(204).end();
